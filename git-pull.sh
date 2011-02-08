@@ -21,9 +21,9 @@ do
     else
         if [ -d $startDirectory/.git ]
         then
-	    echo "-------------------------------"
-	    echo "-- Updating $startDirectory"
-	    echo "-------------------------------"
+	    echo "----------------------------------------"
+	    echo "-- git pull $startDirectory"
+	    echo "----------------------------------------"
             pushd $startDirectory >/dev/null
             git pull
             popd >/dev/null 
