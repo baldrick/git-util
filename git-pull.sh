@@ -17,7 +17,7 @@ do
     startDirectory=$1
     if [ ! -d $startDirectory ]
     then
-        echo "Directory $startDirectory does not exist..."
+        echo "Directory $startDirectory does not exist - skipping..."
     else
         if [ -d $startDirectory/.git ]
         then
@@ -31,10 +31,11 @@ do
 	    echo "-----------------------------------------------------------------------"
 	    echo "-- Recursively updating $startDirectory"
 	    echo "-----------------------------------------------------------------------"
-            echo pulling $startDirectory
             for directory in `ls -Al $startDirectory | grep ^d | awk '{printf("%s\n",$9);}'`
             do
-                ./gitPull.sh $startDirectory/$directory
+	        # Use $0 so this script works if git-pull.sh isn't in your path...
+		# Nice side-effect is that it also works if the script is renamed ;-)
+                $0 $startDirectory/$directory
             done
         fi
     fi
