@@ -1,0 +1,40 @@
+#!/bin/sh
+
+usage()
+{
+    echo "Usage: $0 <destination repo> <source branch> <destination branch> <directory...>"
+    exit -1
+}
+
+if [ $# -eq 0 ]
+then
+    usage
+fi
+
+dest_repo=origin
+source_branch=
+dest_branch=
+
+while getopts r:s:d: option
+do
+    case $option in
+        r) dest_repo=$OPTARG;;
+	s) source_branch=$OPTARG;;
+	d) dest_branch=$OPTARG;;
+	*) usage;;
+    esac
+done
+
+if [ -z $dest_repo ]
+then
+    dest_repo=origin
+fi
+
+if [[ -z $source_branch && -z $dest_branch ]]
+then
+    separator=
+else
+    separator=:
+fi
+
+git-recurse "git push $dest_repo $source_branch$separator$dest_branch" $*

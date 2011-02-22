@@ -1,0 +1,46 @@
+#!/bin/sh
+
+usage()
+{
+    echo "Usage: $0 $command <directory>*"
+    exit -1
+}
+
+if [ $# -eq 0 ]
+then
+    usage
+fi
+
+command=$1
+shift
+
+while [ $# -gt 0 ]
+do
+    startDirectory=$1
+    if [ ! -d $startDirectory ]
+    then
+        echo "Directory $startDirectory does not exist - skipping..."
+    else
+        if [ -d $startDirectory/.git ]
+        then
+	    echo "----------------------------------------"
+	    echo "-- $command $startDirectory"
+	    echo "----------------------------------------"
+            pushd $startDirectory >/dev/null
+            $command
+            popd >/dev/null 
+        else
+	    echo "-----------------------------------------------------------------------"
+	    echo "-- Recursively processing $startDirectory"
+	    echo "-----------------------------------------------------------------------"
+            for directory in `ls -Al $startDirectory | grep ^d | awk '{printf("%s\n",$9);}'`
+            do
+	        # Use $0 so this script works if this script isn't in your path...
+		# Nice side-effect is that it also works if the script is renamed ;-)
+                $0 "$command" $startDirectory/$directory
+            done
+        fi
+    fi
+
+    shift
+done
