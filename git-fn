@@ -1,0 +1,37 @@
+#!/bin/sh
+
+usage()
+{
+    echo "Usage: $0 -r destination repo -s source branch -d destination branch directory1 directory2 ... directoryN"
+    echo "destination repo defaults to origin"
+    echo "source branch defaults to all branches"
+    echo "destination branch defaults to all branches"
+    echo "directory defaults to the current directory"
+    exit -1
+}
+
+parse_opts()
+{
+    dest_repo=origin
+    source_branch=
+    dest_branch=
+    separator=
+
+    while getopts r:s:d: option
+    do
+        case $option in
+            r) dest_repo=$OPTARG
+               (( shift = shift + 2 ))
+               ;;
+            s) source_branch=$OPTARG
+               separator=:
+               (( shift = shift + 2 ))
+               ;;
+            d) dest_branch=$OPTARG
+               separator=:
+               (( shift = shift + 2 ))
+               ;;
+            *) usage;;
+        esac
+    done
+}
