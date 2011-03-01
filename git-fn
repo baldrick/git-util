@@ -49,7 +49,7 @@ usage()
 
 init()
 {
-    export log_level=$LOG_LEVEL_ALL
+    export log_level=$LOG_LEVEL_TERSE
     export remote_repo=origin
     export source_branch=
     export dest_branch=
