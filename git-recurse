@@ -28,7 +28,7 @@ do
 	    log verbose "----------------------------------------"
 	    log verbose "-- $command $startDirectory"
 	    log verbose "----------------------------------------"
-	    log_nnl terse "$command $startDirectory: "
+	    log terse "$command $startDirectory"
             pushd "$startDirectory" >/dev/null
             $command
             popd >/dev/null 

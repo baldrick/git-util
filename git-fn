@@ -11,7 +11,7 @@ log()
     if [ `xlate_log_word_to_number $1` -le $log_level ]
     then
         shift
-        echo $*
+        echo "$*"
     fi
 }
 
@@ -20,7 +20,7 @@ log_nnl()
     if [ `xlate_log_word_to_number $1` -le $log_level ]
     then
         shift
-        echo -n $*
+        echo -n "$*"
     fi
 }
 
