@@ -1,0 +1,19 @@
+#!/bin/sh
+
+export GITR_HOME=`dirname $0`
+. $GITR_HOME/git-fn
+
+parse_opts $*
+shift $shift
+
+if [ $# -eq 0 ]
+then
+    $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" .
+else
+    if [ $# -gt 1 ]
+    then
+        $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" $*
+    else
+        $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" "$*"
+    fi
+fi

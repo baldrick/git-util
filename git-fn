@@ -1,26 +1,77 @@
 #!/bin/sh
 
+LOG_LEVEL_ALL=0
+LOG_LEVEL_FATAL=10
+LOG_LEVEL_WARN=20
+LOG_LEVEL_TERSE=30
+LOG_LEVEL_VERBOSE=40
+
+log()
+{
+    if [ `xlate_log_word_to_number $1` -le $log_level ]
+    then
+        shift
+        echo $*
+    fi
+}
+
+log_nnl()
+{
+    if [ `xlate_log_word_to_number $1` -le $log_level ]
+    then
+        shift
+        echo -n $*
+    fi
+}
+
+xlate_log_word_to_number()
+{
+    level=$LOG_LEVEL_ALL
+    case $1 in
+        fatal)   level=$LOG_LEVEL_FATAL;;
+	warn)    level=$LOG_LEVEL_WARN;;
+	terse)   level=$LOG_LEVEL_TERSE;;
+	verbose) level=$LOG_LEVEL_VERBOSE;;
+    esac
+    echo $level
+}
+
 usage()
 {
-    echo "Usage: $0 -r destination repo -s source branch -d destination branch directory1 directory2 ... directoryN"
-    echo "destination repo defaults to origin"
-    echo "source branch defaults to all branches"
-    echo "destination branch defaults to all branches"
-    echo "directory defaults to the current directory"
+    log fatal "Usage: $0 push|pull -r remote repo -s source branch -d destination branch -l log level directory1 directory2 ... directoryN"
+    log fatal "remote repo defaults to origin"
+    log fatal "source branch defaults to all branches"
+    log fatal "destination branch defaults to all branches"
+    log fatal "directory defaults to the current directory"
+    log fatal "log level defaults to warn; can be one of fatal, warn, terse, verbose"
     exit -1
+}
+
+init()
+{
+    export log_level=$LOG_LEVEL_ALL
+    export remote_repo=origin
+    export source_branch=
+    export dest_branch=
+    export separator=
 }
 
 parse_opts()
 {
-    dest_repo=origin
-    source_branch=
-    dest_branch=
-    separator=
+    init
 
-    while getopts r:s:d: option
+    case $1 in
+        push) command=push;;
+	pull) command=pull;;
+	*)    usage;;
+    esac
+    shift
+    (( shift = shift + 1 ))
+
+    while getopts r:s:d:l: option
     do
         case $option in
-            r) dest_repo=$OPTARG
+            r) remote_repo=$OPTARG
                (( shift = shift + 2 ))
                ;;
             s) source_branch=$OPTARG
@@ -31,7 +82,20 @@ parse_opts()
                separator=:
                (( shift = shift + 2 ))
                ;;
+	    l) log_level=`xlate_log_word_to_number $OPTARG`
+	       (( shift = shift + 2 ))
+	       ;;
             *) usage;;
         esac
     done
+}
+
+check_for_invalid_directories()
+{
+    star_directories=`ls -Al "$1" | grep ^d | grep \* | wc -l`
+    if [ $star_directories -gt 0 ]
+    then
+        echo "Cannot cope with directory names containing *"
+	usage
+    fi
 }

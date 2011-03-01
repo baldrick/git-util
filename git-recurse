@@ -1,8 +1,10 @@
 #!/bin/sh
 
+. $GITR_HOME/git-fn
+
 usage()
 {
-    echo "Usage: $0 $command <directory>*"
+    log fatal "Usage: $0 $command <directory>*"
     exit -1
 }
 
@@ -17,27 +19,31 @@ shift
 while [ $# -gt 0 ]
 do
     startDirectory=$1
-    if [ ! -d $startDirectory ]
+    if [ ! -d "$startDirectory" ]
     then
-        echo "Directory $startDirectory does not exist - skipping..."
+        log warn "Directory $startDirectory does not exist - skipping..."
     else
-        if [ -d $startDirectory/.git ]
+        if [ -d "$startDirectory/.git" ]
         then
-	    echo "----------------------------------------"
-	    echo "-- $command $startDirectory"
-	    echo "----------------------------------------"
-            pushd $startDirectory >/dev/null
+	    log verbose "----------------------------------------"
+	    log verbose "-- $command $startDirectory"
+	    log verbose "----------------------------------------"
+	    log_nnl terse "$command $startDirectory: "
+            pushd "$startDirectory" >/dev/null
             $command
             popd >/dev/null 
         else
-	    echo "-----------------------------------------------------------------------"
-	    echo "-- Recursively processing $startDirectory"
-	    echo "-----------------------------------------------------------------------"
-            for directory in `ls -Al $startDirectory | grep ^d | awk '{printf("%s\n",$9);}'`
+	    log verbose "-----------------------------------------------------------------------"
+	    log verbose "-- Recursively processing $startDirectory"
+	    log verbose "-----------------------------------------------------------------------"
+            check_for_invalid_directories "$startDirectory"
+            for directory in `find "$startDirectory" -type d -maxdepth 1 | sed 's/^\.\///' | grep -v ^$startDirectory$ | tr ' ' '\*'`
             do
-	        # Use $0 so this script works if this script isn't in your path...
-		# Nice side-effect is that it also works if the script is renamed ;-)
-                $0 "$command" $startDirectory/$directory
+                directory=`echo $directory | tr '\*' ' '`
+
+                # Use $0 so this script works if this script isn't in your path...
+                # Nice side-effect is that it also works if the script is renamed ;-)
+                $0 "$command" "$directory"
             done
         fi
     fi
