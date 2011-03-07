@@ -61,9 +61,10 @@ parse_opts()
     init
 
     case $1 in
-        push) command=push;;
-	pull) command=pull;;
-	*)    usage;;
+        push)		command=push;;
+	pull)		command=pull;;
+	add-commit)	command=add-commit;;
+	*)		usage;;
     esac
     shift
     (( shift = shift + 1 ))

@@ -30,7 +30,11 @@ do
 	    log verbose "----------------------------------------"
 	    log terse "$command $startDirectory"
             pushd "$startDirectory" >/dev/null
-            $command
+	    command_file=/tmp/`basename $0`-$$
+            echo "$command" >>$command_file
+	    chmod u+x $command_file
+	    $command_file
+	    rm $command_file
             popd >/dev/null 
         else
 	    log verbose "-----------------------------------------------------------------------"

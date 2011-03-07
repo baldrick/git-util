@@ -1,19 +1,48 @@
 #!/bin/sh
 
+usage()
+{
+    echo "Usage: $0 push|pull|add-commit"
+    echo "Unknown command $1 - exiting"
+    exit -1
+}
+
+push_or_pull()
+{
+    if [ $# -eq 0 ]
+    then
+        $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" .
+    else
+        if [ $# -gt 1 ]
+        then
+            $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" $*
+        else
+            $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" "$*"
+        fi
+    fi
+}
+
+add_commit()
+{
+    if [ $# -eq 0 ]
+    then
+        $GITR_HOME/git-recurse "git add --all ." .
+        $GITR_HOME/git-recurse "git commit -m \"Auto-commit on `date +%d-%h-%Y\ at\ %H:%M:%S`\"" .
+    else
+        log warn "add-commit does not support specified directories: exiting"
+	exit -1
+    fi
+}
+
 export GITR_HOME=`dirname $0`
 . $GITR_HOME/git-fn
 
 parse_opts $*
 shift $shift
 
-if [ $# -eq 0 ]
-then
-    $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" .
-else
-    if [ $# -gt 1 ]
-    then
-        $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" $*
-    else
-        $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" "$*"
-    fi
-fi
+case $command in
+    pull)	push_or_pull;;
+    push)	push_or_pull;;
+    add-commit)	add_commit;;
+    *)		usage $command;;
+esac
