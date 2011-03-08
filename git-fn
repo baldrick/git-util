@@ -60,12 +60,7 @@ parse_opts()
 {
     init
 
-    case $1 in
-        push)		command=push;;
-	pull)		command=pull;;
-	add-commit)	command=add-commit;;
-	*)		usage;;
-    esac
+    command=$1
     shift
     (( shift = shift + 1 ))
 

@@ -2,23 +2,24 @@
 
 usage()
 {
-    echo "Usage: $0 push|pull|add-commit"
+    echo "Usage: $0 status|log|pull|push|add-commit"
     echo "Unknown command $1 - exiting"
     exit -1
 }
 
-push_or_pull()
+generic_command()
 {
-    if [ $# -eq 0 ]
+    args=$1
+    shift
+
+    # If there are spaces in the names of directories we're processing, we need to handle that.
+    # We'll only get unescaped spaces if there are spaces in the names of directories we're
+    # recursively searching.  For directories passed on the command line, spaces must be escaped.
+    if [ $# -eq 1 ]
     then
-        $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" .
+        $GITR_HOME/git-recurse "git $command $args" "$*"
     else
-        if [ $# -gt 1 ]
-        then
-            $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" $*
-        else
-            $GITR_HOME/git-recurse "git $command $remote_repo $source_branch$separator$dest_branch" "$*"
-        fi
+        $GITR_HOME/git-recurse "git $command $args" $*
     fi
 }
 
@@ -40,9 +41,25 @@ export GITR_HOME=`dirname $0`
 parse_opts $*
 shift $shift
 
+# Default the target directory to the current directory.
+if [ $# -eq 0 ]
+then
+    target_dirs=.
+else
+    if [ $# -gt 1 ]
+    then
+        target_dirs=$*
+    else
+        target_dirs="$*"
+    fi
+fi
+
+# Some commands have slightly different arguments...
 case $command in
-    pull)	push_or_pull;;
-    push)	push_or_pull;;
+    status)	generic_command "" "$target_dirs";;
+    log)	generic_command "--oneline --name-status --since=\"2 days ago\"" "$target_dirs";;
+    pull)	generic_command "$remote_repo $source_branch$separator$dest_branch" "$target_dirs";;
+    push)	generic_command "$remote_repo $source_branch$separator$dest_branch" "$target_dirs";;
     add-commit)	add_commit;;
     *)		usage $command;;
 esac
