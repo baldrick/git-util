@@ -23,6 +23,23 @@ generic_command()
     fi
 }
 
+generic_command_nongit()
+{
+    command=$1
+    args=$2
+    shift 2
+
+    # If there are spaces in the names of directories we're processing, we need to handle that.
+    # We'll only get unescaped spaces if there are spaces in the names of directories we're
+    # recursively searching.  For directories passed on the command line, spaces must be escaped.
+    if [ $# -eq 1 ]
+    then
+        $GITR_HOME/git-recurse "$command $args" "$*"
+    else
+        $GITR_HOME/git-recurse "$command $args" $*
+    fi
+}
+
 add_commit()
 {
     if [ $# -eq 0 ]
@@ -61,5 +78,6 @@ case $command in
     pull)	generic_command "$remote_repo $source_branch$separator$dest_branch" "$target_dirs";;
     push)	generic_command "$remote_repo $source_branch$separator$dest_branch" "$target_dirs";;
     add-commit)	add_commit;;
+    du)         generic_command_nongit du -sk "$target_dirs";;
     *)		usage $command;;
 esac
