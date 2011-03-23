@@ -1,4 +1,4 @@
-Some git utils ... one day I may merge with other similar repos ... but for now I'm keeping it simple.
+Some git utils ... one day I may merge with other similar repos ... for now I'm keeping it simple.
 
 <table>
 <tr>
