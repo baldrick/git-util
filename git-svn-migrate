@@ -1,0 +1,38 @@
+#!/bin/sh
+
+ROOT=`dirname $0`
+. $ROOT/git-fn
+
+parse_opts nop $*
+
+LOG=/tmp/$0-$$
+
+flog terse $LOG Cloning $svn_repo as $user
+git svn clone --username=$user --stdlayout $svn_repo >>$LOG
+
+LAST_SVN_COMMIT_ID=`grep ^r $LOG | tail -1 | sed 's/\ .*//' | sed 's/^r//'`
+flog info $LOG Clone got as far as commit id $LAST_SVN_COMMIT_ID
+
+# The initial clone will go into a sub-directory of the current directory.
+# The name of that sub-directory will be the same as the final directory in the svn repo path.
+# So we must go to that directory before running git svn fetch...
+cd `basename $svn_repo`
+
+NUM_FETCHES=0
+while true
+do
+    flog info $LOG Fetching from svn...
+    git svn fetch $LOG >>$LOG
+    SVN_COMMIT_ID=`grep ^r $LOG | tail -1 | sed 's/\ .*//' | sed 's/^r//'`
+    if [ $SVN_COMMIT_ID -eq $LAST_SVN_COMMIT_ID ]
+    then
+        flog info $LOG Migration from svn to git finished.
+        echo Don\'t forget to delete the log file: rm $LOG
+	exit 0
+    else
+	(( NUM_FETCHES = NUM_FETCHES + 1 ))
+        flog warn $LOG git svn fetch \#$NUM_FETCHES incomplete \(to commit id $SVN_COMMIT_ID\) ... resuming in a few seconds
+	LAST_SVN_COMMIT_ID=$SVN_COMMIT_ID
+	sleep 5
+    fi
+done

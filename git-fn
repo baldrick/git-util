@@ -6,12 +6,32 @@ LOG_LEVEL_WARN=20
 LOG_LEVEL_TERSE=30
 LOG_LEVEL_VERBOSE=40
 
+log_date()
+{
+    echo -n `date +"%d-%b-%Y %H:%M:%S"`
+}
+
 log()
 {
-    if [ `xlate_log_word_to_number $1` -le $log_level ]
+    this_log_level=$1
+    if [ `xlate_log_word_to_number $this_log_level` -le $log_level ]
     then
         shift
-        echo "$*"
+        echo "`log_date` $this_log_level: $*"
+    fi
+}
+
+flog()
+{
+    this_log_level=$1
+    if [ `xlate_log_word_to_number $this_log_level` -le $log_level ]
+    then
+        shift
+	LOGFILE=$1
+	shift
+	message_date=`log_date`
+        echo "$message_date $this_log_level: $*"
+        echo "$message_date $this_log_level: $*" >>$LOGFILE
     fi
 }
 
@@ -20,7 +40,7 @@ log_nnl()
     if [ `xlate_log_word_to_number $1` -le $log_level ]
     then
         shift
-        echo -n "$*"
+        echo -n "`log_date` $this_log_level: $*"
     fi
 }
 
@@ -54,6 +74,8 @@ init()
     export source_branch=
     export dest_branch=
     export separator=
+    export user=
+    export svn_repo=
 }
 
 parse_opts()
@@ -64,7 +86,7 @@ parse_opts()
     shift
     (( shift = shift + 1 ))
 
-    while getopts r:s:d:l: option
+    while getopts r:s:d:l:u:v: option
     do
         case $option in
             r) remote_repo=$OPTARG
@@ -81,6 +103,12 @@ parse_opts()
 	    l) log_level=`xlate_log_word_to_number $OPTARG`
 	       (( shift = shift + 2 ))
 	       ;;
+	    u) user=$OPTARG
+               (( shift = shift + 2 ))
+               ;;
+	    v) svn_repo=$OPTARG
+               (( shift = shift + 2 ))
+               ;;
             *) usage;;
         esac
     done
