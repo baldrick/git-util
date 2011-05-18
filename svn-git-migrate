@@ -1,0 +1,94 @@
+#!/usr/bin/sh
+
+START_DIR=`pwd`
+ROOT=`dirname $0`
+. $ROOT/git-fn
+set -x
+
+init
+
+usage()
+{
+    log fatal "Usage: $0 -r svn repo -u svn username <-t tags dir> <-T trunk dir> <-b branches dir> <-R> <-x>"
+    log fatal "-t to be used when tags in svn are not in the standard 'tags' sub-directory"
+    log fatal "-T to be used when trunk in svn is not in the standard 'trunk' sub-directory"
+    log fatal "-b to be used when branches in svn are not in the standard 'branches' sub-directory"
+    log fatal "-R indicates that the svn root is in fact the trunk of the repository"
+    log fatal "-x should be used when you don't want svn2git to automatically fix the tags / branches"
+    log info "Migrate from svn to git by:-"
+    log info "1. checking out latest code from svn"
+    log info "2. use svn log to extract best guess at authors file (to be manually checked)"
+    log info "3. use svn2git to migrate complete history from svn to git"
+    exit -1
+}
+
+while getopts r:u:t:T:b:Rx option
+do
+    case $option in
+        r) svn_repo=$OPTARG;;
+        u) svn_user=$OPTARG;;
+        t) tags_dir='--tags=$OPTARG';;
+        T) trunk_dir='--trunk=$OPTARG';;
+        b) branches_dir='--branches=$OPTARG';;
+        R) rootistrunk='--rootistrunk';;
+        x) nofix='--nofix';;
+        *) usage;;
+    esac
+done
+
+project_name=`basename $svn_repo`
+mkdir -p $project_name
+pushd $project_name >/dev/null
+
+if [ -d svn/$project_name ]
+then
+    log info "It looks like the initial svn checkout has already been done ... skipping checkout"
+else
+    mkdir svn
+    pushd svn >/dev/null
+    svn checkout --username $svn_user $svn_repo
+    popd >/dev/null
+fi
+
+if [ -f svn/$project_name.svn.log ]
+then
+    log info "It looks like the svn log has already been created ... skipping svn log creation"
+else
+    pushd svn/$project_name >/dev/null
+    svn log -q >../$project_name.svn.log
+    popd >/dev/null
+fi
+
+if [ -f $project_name.authors ]
+then
+    log info "It looks like the authors file has already been created ... skipping author file creation"
+else
+    authors=`grep -e '^r[0-9]' svn/$project_name.svn.log |\
+        awk 'BEGIN \
+            { FS = "|" } ; \
+    	    { print $2 } $1 ~ /r([0-9]+000)/ { print "fetched revision " substr($1, 2) > "/dev/stderr" }' |\
+        sort -u`
+
+    TMPFILE=/tmp/`basename $0`.$$
+    echo "# Ensure the mappings from svn username to 'real world' name and <email address> are correct." >$project_name.authors
+    echo "# Once they are, save this file and the migration will continue." >>$project_name.authors
+    for author in $authors
+    do
+        # This bit of sed-fu replaces only the final underscore with a carriage return.
+        # This means names including a middle initial, e.g. john_x_doe, get correctly split (i.e. john_x and doe)
+        echo $author | sed 's/_ext$//' | sed 's/\(.*\)_/\1\n/' >$TMPFILE
+        # These bits of sed-fu uppercase the first letter of the name (and the _ changed to - for good ol' john_x doe)
+        first=`head -1 $TMPFILE | sed 's/^[a-z]/\u&/' | sed 's/_/-/'`
+        # These bits of sed-fu uppercase the first letter of the name
+        last=`tail -1 $TMPFILE | sed 's/^[a-z]/\u&/'`
+        echo $author = $first $last \<$first.$last@db.com\> >>$project_name.authors
+    done
+    rm $TMPFILE
+fi
+
+vi $START_DIR/$project_name/$project_name.authors
+
+mkdir -p git/$project_name
+cd git/$project_name
+#svn2git --username $svn_user --authors ../../$project_name.authors --metadata $trunk_dir $tags_dir $branches_dir $rootistrunk $nofix $svn_repo
+log info "Now run cd $project_name/git/$project_name; svn2git --username $svn_user --authors ../../$project_name.authors --metadata $trunk_dir $tags_dir $branches_dir $rootistrunk $nofix $svn_repo"
