@@ -4,7 +4,8 @@ LOG_LEVEL_ALL=0
 LOG_LEVEL_FATAL=10
 LOG_LEVEL_WARN=20
 LOG_LEVEL_TERSE=30
-LOG_LEVEL_VERBOSE=40
+LOG_LEVEL_INFO=40
+LOG_LEVEL_VERBOSE=50
 
 log_date()
 {
@@ -30,14 +31,16 @@ flog()
 	LOGFILE=$1
 	shift
 	message_date=`log_date`
-        echo "$message_date $this_log_level: $*"
-        echo "$message_date $this_log_level: $*" >>$LOGFILE
+	message="$*"
+        echo "$message_date $this_log_level: $message"
+        echo "$message_date $this_log_level: $message" >>$LOGFILE
     fi
 }
 
 log_nnl()
 {
-    if [ `xlate_log_word_to_number $1` -le $log_level ]
+    this_log_level=$1
+    if [ `xlate_log_word_to_number $this_log_level` -le $log_level ]
     then
         shift
         echo -n "`log_date` $this_log_level: $*"
@@ -46,11 +49,12 @@ log_nnl()
 
 xlate_log_word_to_number()
 {
-    level=$LOG_LEVEL_ALL
+    level=$LOG_LEVEL_TERSE
     case $1 in
-        fatal)   level=$LOG_LEVEL_FATAL;;
+    fatal)   level=$LOG_LEVEL_FATAL;;
 	warn)    level=$LOG_LEVEL_WARN;;
-	terse)   level=$LOG_LEVEL_TERSE;;
+    terse)   level=$LOG_LEVEL_TERSE;;
+    info)    level=$LOG_LEVEL_INFO;;
 	verbose) level=$LOG_LEVEL_VERBOSE;;
     esac
     echo $level
@@ -63,7 +67,7 @@ usage()
     log fatal "source branch defaults to all branches"
     log fatal "destination branch defaults to all branches"
     log fatal "directory defaults to the current directory"
-    log fatal "log level defaults to warn; can be one of fatal, warn, terse, verbose"
+    log fatal "log level defaults to terse; can be one of fatal, warn, terse, info, verbose"
     exit -1
 }
 
@@ -89,27 +93,27 @@ parse_opts()
     while getopts r:s:d:l:u:v: option
     do
         case $option in
-            r) remote_repo=$OPTARG
-               (( shift = shift + 2 ))
-               ;;
-            s) source_branch=$OPTARG
-               separator=:
-               (( shift = shift + 2 ))
-               ;;
-            d) dest_branch=$OPTARG
-               separator=:
-               (( shift = shift + 2 ))
-               ;;
-	    l) log_level=`xlate_log_word_to_number $OPTARG`
-	       (( shift = shift + 2 ))
-	       ;;
-	    u) user=$OPTARG
-               (( shift = shift + 2 ))
-               ;;
-	    v) svn_repo=$OPTARG
-               (( shift = shift + 2 ))
-               ;;
-            *) usage;;
+            r)  remote_repo=$OPTARG
+                (( shift = shift + 2 ))
+                ;;
+            s)  source_branch=$OPTARG
+                separator=:
+                (( shift = shift + 2 ))
+                ;;
+            d)  dest_branch=$OPTARG
+                separator=:
+                (( shift = shift + 2 ))
+                ;;
+            l)  log_level=`xlate_log_word_to_number $OPTARG`
+                (( shift = shift + 2 ))
+                ;;
+            u)  user=$OPTARG
+                (( shift = shift + 2 ))
+                ;;
+            v)  svn_repo=$OPTARG
+                (( shift = shift + 2 ))
+                ;;
+            *)  usage;;
         esac
     done
 }
