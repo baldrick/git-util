@@ -1,0 +1,24 @@
+#!/usr/bin/sh
+
+# Expects output of 'svn log -q' on stdin
+# Puts authors file on stdout
+
+authors=`grep -e '^r[0-9]' - |\
+    awk 'BEGIN \
+        { FS = "|" } ; \
+	{ print $2 } $1 ~ /r([0-9]+000)/ { print "fetched revision " substr($1, 2) > "/dev/stderr" }' |\
+    sort |\
+    uniq`
+
+TMPFILE=/tmp/`basename $0`.$$
+for author in $authors
+do
+    # This bit of sed-fu replaces only the final underscore with a carriage return.
+    # This means names including a middle initial, e.g. john_x_doe, get correctly split (i.e. john_x and doe)
+    echo $author | sed 's/\(.*\)_/\1\n/' >$TMPFILE
+    # These bits of sed-fu uppercase the first letter of each name (and the _ changed to - for good ol' john_x doe)
+    first=`head -1 $TMPFILE | sed 's/^[a-z]/\u&/' | sed 's/_/-/'`
+    last=`tail -1 $TMPFILE | sed 's/^[a-z]/\u&/'`
+    echo $author = $first $last \<$first.$last@db.com\>
+done
+rm $TMPFILE

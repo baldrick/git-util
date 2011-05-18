@@ -3,15 +3,101 @@
 ROOT=`dirname $0`
 . $ROOT/git-fn
 
-parse_opts nop $*
+usage()
+{
+    log fatal "Usage: $0 -r svn repo -u svn username -a authors file <-s> <-T trunk dir> <-t tags dir> <-b branches dir> <-v start revision> <-l log level>"
+    log fatal "svn repo, svn username and authors file must be provided"
+    log info "log level defaults to warn; can be one of fatal, warn, terse, verbose"
+    log info "If authors file does not exist, this script will create a starter authors file then exit so it can be manually checked / edited.  Re-run this script with the authors file in place to perform the actual migration from svn."
+    exit -1
+}
 
-LOG=/tmp/$0-$$
+createAuthorsFile()
+{
+    flog info $LOG "Creating authors file"
+    svn_co=$0-svn.checkout.$$
+    svn_log=$0-svn.log.$$
 
-flog terse $LOG Cloning $svn_repo as $user
-git svn clone --username=$user --stdlayout $svn_repo >>$LOG
+    flog info $LOG "Checking out $svn_repo from svn into $svn_co"
+    svn co --username $user $svn_repo $svn_co
 
-LAST_SVN_COMMIT_ID=`grep ^r $LOG | tail -1 | sed 's/\ .*//' | sed 's/^r//'`
-flog info $LOG Clone got as far as commit id $LAST_SVN_COMMIT_ID
+    flog info $LOG "Creating svn log from $svn_co"
+    cd $svn_co
+    svn log -q >../$svn_log
+
+    flog info $LOG "Creating authors file $authors_file from $svn_log"
+    cd ..
+    git-svn-authors <$svn_log >$authors_file
+
+    flog warn $LOG "Remember to remove $svn_log and $svn_co"
+    #rm $svn_log
+    #rm -rf $svn_co
+}
+
+init
+
+LOG=/tmp/`basename $0`-$$
+
+layout=
+while getopts l:u:r:a:sT:t:b:v: option
+do
+    case $option in
+        l) log_level=`xlate_log_word_to_number $OPTARG`
+           ;;
+        u) user=$OPTARG
+           ;;
+        r) svn_repo=$OPTARG
+           ;;
+	a) authors_file=$OPTARG
+	   ;;
+	s) layout="--stdlayout"
+	   ;;
+	T) layout="$layout --trunk=$OPTARG"
+	   ;;
+	t) layout="$layout --tags=$OPTARG"
+	   ;;
+	b) layout="$layout --branches=$OPTARG"
+	   ;;
+	v) revision="-r $OPTARG:HEAD"
+	   if [ `echo $OPTARG | sed 's/[0-9]*//g' | wc -w` -gt 0 ]
+	   then
+	       flog error $LOG "Revision must be a number, preceding r must be dropped."
+	       exit -1
+	   fi
+	   flog info $LOG "Fetching from revision $OPTARG onwards"
+	   ;;
+        *) usage;;
+    esac
+done
+
+if [ -z "$authors_file" ]
+then
+    usage
+else
+    if [ ! -f $authors_file ]
+    then
+        createAuthorsFile
+	flog terse $LOG "Now edit $authors_file to ensure correctness and re-run this script using the same command line options."
+	exit 0
+    fi
+fi
+
+if [ -z "$layout" ]
+then
+    flog info $LOG Assuming standard layout for svn repo
+    layout="--stdlayout"
+fi
+
+if [ -d `basename $svn_repo` ]
+then
+    flog info $LOG `basename $svn_repo` already exists ... assuming clone already started, resuming with fetch
+    LAST_SVN_COMMIT_ID=0
+else
+    flog terse $LOG Cloning $svn_repo as $user
+    git svn clone --prefix=svn/ $revision --username=$user $layout --authors-file=$authors_file $svn_repo 2>&1 1>>$LOG
+    LAST_SVN_COMMIT_ID=`grep ^r $LOG | tail -1 | sed 's/\ .*//' | sed 's/^r//'`
+    flog info $LOG Clone got as far as commit id $LAST_SVN_COMMIT_ID
+fi
 
 # The initial clone will go into a sub-directory of the current directory.
 # The name of that sub-directory will be the same as the final directory in the svn repo path.
@@ -22,8 +108,14 @@ NUM_FETCHES=0
 while true
 do
     flog info $LOG Fetching from svn...
-    git svn fetch $LOG >>$LOG
+    git svn fetch $revision 2>&1 1>>$LOG
     SVN_COMMIT_ID=`grep ^r $LOG | tail -1 | sed 's/\ .*//' | sed 's/^r//'`
+    if [ -z "$SVN_COMMIT_ID" ]
+    then
+        flog warn $LOG Last fetch returned no commit id - stopping
+	echo Don\'t forget to delete the log file: rm $LOG
+	exit -1
+    fi
     if [ $SVN_COMMIT_ID -eq $LAST_SVN_COMMIT_ID ]
     then
         flog info $LOG Migration from svn to git finished.
@@ -36,3 +128,10 @@ do
 	sleep 5
     fi
 done
+
+flog info $LOG Pre-gc size: `du -sk .`
+git gc
+flog info $LOG Post-gc size: `du -sk .`
+
+flog info $LOG You should probably now run git reset --hard to sync the working directory with the index...
+flog info $LOG Anyway, migration from svn is complete \(probably - run git svn fetch to make sure!\)
