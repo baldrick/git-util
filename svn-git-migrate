@@ -3,7 +3,6 @@
 START_DIR=`pwd`
 ROOT=`dirname $0`
 . $ROOT/git-fn
-set -x
 
 init
 
@@ -90,5 +89,7 @@ vi $START_DIR/$project_name/$project_name.authors
 
 mkdir -p git/$project_name
 cd git/$project_name
+log info "Now run:-"
+log info "cd $project_name/git/$project_name"
+log info "svn2git --username $svn_user --authors ../../$project_name.authors --metadata $trunk_dir $tags_dir $branches_dir $rootistrunk $nofix $svn_repo"
 #svn2git --username $svn_user --authors ../../$project_name.authors --metadata $trunk_dir $tags_dir $branches_dir $rootistrunk $nofix $svn_repo
-log info "Now run cd $project_name/git/$project_name; svn2git --username $svn_user --authors ../../$project_name.authors --metadata $trunk_dir $tags_dir $branches_dir $rootistrunk $nofix $svn_repo"
