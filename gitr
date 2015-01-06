@@ -81,3 +81,4 @@ case $command in
     du)         generic_command_nongit du -sk "$target_dirs";;
     *)		usage $command;;
 esac
+
