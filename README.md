@@ -19,7 +19,7 @@ Some git utils ... one day I may merge with other similar repos ... for now I'm 
 
 <tr>
 <td>svn-git-migrate</td>
-</td>Simplify task of migrating from svn to git.  Requires svn2git.</td>
+<td>Simplify task of migrating from svn to git.  Requires svn2git.</td>
 </tr>
 
 </table>
