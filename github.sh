@@ -4,10 +4,12 @@
 
 function usage() {
      cat << END_USAGE
-     Usage: $0 -u <username> -p <token> -c <get|repos.list|read.grant> -t <target> -r <repo(s)>
+     Usage: $0 -u <username> -p <token> -c <clone|get|repos.list|read.grant> -t <target> -r <repo(s)>
          -u: ${github_username}
          -p: ${github_token}
          -c: ${cmd} chosen from available commands:
+            clone to clone all repos to the local machine
+            get to run HTTP GET on the <target> URL
             repos.list to list all repos for this user
             read.grant to grant read access for the specified repo (* for all) to the target user
          -t: ${target} target for grant access or target resource when 'get'ing
@@ -133,7 +135,7 @@ function repo_list() {
         get "${l_next}" >$l_response_file
         local l_body=$(grep -v ^[A-Z] ${l_response_file} | tr -d "\015" | grep -v ^$)
         echo $l_body \
-            | jq --compact-output ".[] | if .owner.login == \"${github_username}\" then {name: .full_name} else null end" \
+            | jq --compact-output ".[] | if .owner.login == \"${github_username}\" then {name: .full_name, ssh_url: .ssh_url} else null end" \
             | grep -v ^null \
             >> ${l_repositories}
 
@@ -183,6 +185,15 @@ function read_grant() {
     fi
 }
 
+function clone() {
+    local l_repos=$(repo_list)
+    for l_repo_json in $l_repos
+    do
+        local l_git_url=$(echo ${l_repo_json} | jq ".ssh_url" | tr -d '"' | sed 's/github.com/baldrickatdb.github/')
+        git clone --bare $l_git_url
+    done
+}
+
 function execute() {
     case "$cmd" in
         "repos.list")
@@ -190,6 +201,9 @@ function execute() {
             ;;
         "read.grant")
             read_grant "${target}" "${repo}"
+            ;;
+        "clone")
+            clone
             ;;
         "get")
             get "${target}"
